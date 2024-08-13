@@ -1,6 +1,4 @@
-numpy
+numpy==1.24.4
 pandas
 streamlit
-prophet==1.1.5  # Ensure you're using an up-to-date version
-
-# Remove or find an alternative for packages that explicitly need distutils
+prophet
