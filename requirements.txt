@@ -1,5 +1,4 @@
-numpy==1.24.4
-pandas==2.0.3
-streamlit==1.26.0
-prophet==1.1.5
-matplotlib==3.7.2
+numpy
+pandas
+streamlit
+# Remove or find an alternative for packages that explicitly need distutils
