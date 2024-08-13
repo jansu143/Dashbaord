@@ -67,13 +67,45 @@ if not filtered_data.empty:
 else:
     st.write("No data available for the selected category.")
 
-# Category Trends Over Time
+# Customer Trend Analysis
+st.subheader("Customer Trend Analysis")
+if not filtered_data.empty:
+    # Plot customer trends over time (e.g., sales by date)
+    customer_trend_fig = px.line(filtered_data, x='Date', y='Amount', title='Customer Trend Over Time')
+    st.plotly_chart(customer_trend_fig)
+else:
+    st.write("No data available for the selected category.")
+
+# Predict Uplift with Adjustments
+st.subheader("Predict Uplift with Scenario Adjustments")
+if not filtered_data.empty:
+    # User input for scenario adjustments
+    uplift_percentage = st.slider("Expected Increase in Sales (%)", min_value=0, max_value=100, value=10)
+    
+    # Adjust the forecast based on user input
+    adjusted_forecast = forecast.copy()
+    adjusted_forecast['yhat'] *= (1 + uplift_percentage / 100.0)
+
+    # Plot the adjusted forecast
+    fig_adjusted_forecast = go.Figure()
+
+    # Plot the original forecast data
+    fig_adjusted_forecast.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Original Forecast'))
+
+    # Plot the adjusted forecast data
+    fig_adjusted_forecast.add_trace(go.Scatter(x=adjusted_forecast['ds'], y=adjusted_forecast['yhat'], mode='lines', name='Adjusted Forecast'))
+
+    fig_adjusted_forecast.update_layout(title=f'Sales Forecast with {uplift_percentage}% Uplift in {category}', xaxis_title='Date', yaxis_title='Sales Amount')
+    st.plotly_chart(fig_adjusted_forecast)
+else:
+    st.write("No data available for the selected category.")
+
+# Rest of the Dashboard Code (Category Trends, Heatmaps, etc.)
 st.subheader("Category Trends Over Time")
 category_trends = df.groupby(['Date', 'Category'])['Amount'].sum().reset_index()
 fig_category_trends = px.line(category_trends, x='Date', y='Amount', color='Category', title='Category Trends Over Time')
 st.plotly_chart(fig_category_trends)
 
-# Heatmap - CY vs PY Differences across Fulfilment and Sales Channel
 st.subheader("Heatmap: CY vs PY Differences")
 summary_df_extended = filtered_data.groupby(
     ['Category', 'Fulfilment', 'Sales Channel ', 'ship-service-level', 'Status']
@@ -97,31 +129,26 @@ fig_heatmap = go.Figure(data=go.Heatmap(
 fig_heatmap.update_layout(title='CY vs PY Differences Heatmap', xaxis_nticks=36)
 st.plotly_chart(fig_heatmap)
 
-# Current Market Trend (Sales Over Time)
 st.subheader("Current Market Trend: Sales Over Time")
 sales_over_time = filtered_data.groupby('Date')['Amount'].sum().reset_index()
 fig_sales_over_time = px.line(sales_over_time, x='Date', y='Amount', title='Sales Over Time')
 st.plotly_chart(fig_sales_over_time)
 
-# Category Sales Distribution
 st.subheader("Category Sales Distribution")
 category_distribution = df.groupby('Category')['Amount'].sum().reset_index()
 fig_category_distribution = px.pie(category_distribution, values='Amount', names='Category', title='Category Sales Distribution')
 st.plotly_chart(fig_category_distribution)
 
-# Top Products by Sales
 st.subheader("Top Products by Sales")
 top_products = filtered_data.groupby('Style')['Amount'].sum().reset_index().sort_values(by='Amount', ascending=False).head(10)
 fig_top_products = px.bar(top_products, x='Style', y='Amount', title='Top 10 Products by Sales')
 st.plotly_chart(fig_top_products)
 
-# Sales by Region
 st.subheader("Sales by Region")
 sales_by_region = filtered_data.groupby('ship-state')['Amount'].sum().reset_index()
 fig_sales_by_region = px.bar(sales_by_region, x='ship-state', y='Amount', title='Sales by Region')
 st.plotly_chart(fig_sales_by_region)
 
-# Identify the product with the most and least sales
 st.subheader("Product Sales Analysis")
 product_sales = filtered_data.groupby('Style')['Amount'].sum().reset_index()
 max_sales_product = product_sales.loc[product_sales['Amount'].idxmax()]
