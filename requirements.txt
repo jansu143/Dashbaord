@@ -1,2 +1,2 @@
-prophet==<version>
+proophet
 numpy-1.24.4
