@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Load your data
-@st.cache
+# Load the data
+@st.cache_data
 def inventory_dashboard():
     inventory_data_path = '../mnt/data/apparel.csv'  # Adjust the path as necessary
     df = pd.read_csv(inventory_data_path)
-    df['Date'] = pd.date_range(start='2023-01-01', periods=len(df), freq='D') # Ensure 'Date' is in datetime format
     return df
 
 inventory_df = inventory_dashboard()
@@ -23,30 +22,28 @@ st.dataframe(inventory_df.head())
 
 # Sidebar for filtering
 st.sidebar.header('Filter Options')
-region = st.sidebar.selectbox('Select Region', inventory_df['Region'].unique())
-date_range = st.sidebar.slider('Select Date Range', 
-                               value=[inventory_df['Date'].min(), 
-                                      inventory_df['Date'].max()])
+vendor = st.sidebar.selectbox('Select Vendor', inventory_df['Vendor'].unique())
+product_type = st.sidebar.selectbox('Select Product Type', inventory_df['Handle'].unique())
 
 # Filtered data based on selection
-filtered_inventory = inventory_df[(inventory_df['Region'] == region) & 
-                                  (inventory_df['Date'].between(date_range[0], date_range[1]))]
+filtered_inventory = inventory_df[(inventory_df['Vendor'] == vendor) & 
+                                  (inventory_df['Handle'] == product_type)]
 
-# Inventory Levels Over Time
-st.subheader("Inventory Levels Over Time")
-inventory_trend = filtered_inventory.groupby(['Date', 'Product'])['Inventory'].sum().reset_index()
-fig_inventory_trend = px.line(inventory_trend, x='Date', y='Inventory', color='Product', title='Inventory Levels Over Time')
+# Inventory Levels Visualization
+st.subheader("Inventory Levels by Product")
+inventory_trend = filtered_inventory.groupby(['Variant SKU'])['Variant Inventory Qty'].sum().reset_index()
+fig_inventory_trend = px.bar(inventory_trend, x='Variant SKU', y='Variant Inventory Qty', title='Inventory Levels by SKU')
 st.plotly_chart(fig_inventory_trend)
 
 # Inventory Optimization (Simple Example)
 st.subheader("Inventory Optimization")
 
-# Example optimization (replace with actual optimization logic)
-optimization_results = filtered_inventory.groupby(['Date', 'Region'])['Inventory'].sum().reset_index()
-optimization_results['Optimized_Inventory'] = optimization_results['Inventory'] * 1.1  # Example: Increase by 10%
+# Example optimization (adjust inventory levels)
+optimization_results = filtered_inventory.copy()
+optimization_results['Optimized Inventory'] = optimization_results['Variant Inventory Qty'] * 1.1  # Example: Increase by 10%
 
-fig_optimization = px.bar(optimization_results, x='Date', y='Optimized_Inventory', color='Region', title='Optimized Inventory Allocation')
+fig_optimization = px.bar(optimization_results, x='Variant SKU', y='Optimized Inventory', title='Optimized Inventory Levels by SKU')
 st.plotly_chart(fig_optimization)
 
 # Display Optimization Results
-st.write(optimization_results[['Date', 'Region', 'Optimized_Inventory']])
+st.write(optimization_results[['Variant SKU', 'Variant Inventory Qty', 'Optimized Inventory']])
