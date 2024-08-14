@@ -2,4 +2,5 @@ pandas
 streamlit
 setuptools>=65.0.0
 prophet
-numpy
+numpy==1.24.4
+plotly
