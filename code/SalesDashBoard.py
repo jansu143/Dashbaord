@@ -4,6 +4,9 @@ import numpy as np
 from prophet import Prophet
 import plotly.graph_objs as go
 import plotly.express as px
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
 
 # Load your data
 data_path = '../mnt/data/AmazonSaleReport.csv'  # Replace with your actual CSV file path
@@ -15,12 +18,22 @@ df['Date'] = pd.to_datetime(df['Date'])
 # Handle missing values
 df['Amount'] = df['Amount'].fillna(0)
 
+# Load weather data (you need to have this data)
+weather_data_path = '../mnt/data/weather_sales_data.csv'  # Replace with your weather data CSV path
+weather_df = pd.read_csv(weather_data_path)
+
+# Ensure the 'Date' column is in datetime format
+weather_df['Date'] = pd.to_datetime(weather_df['Date.Full'])
+
+# Merge sales data with weather data on the 'Date' column
+merged_df = pd.merge(df, weather_df, on='Date', how='left')
+
 # Sidebar for filtering
 st.sidebar.header('Filter Options')
-category = st.sidebar.selectbox('Select Category', df['Category'].unique())
+category = st.sidebar.selectbox('Select Category', merged_df['Category'].unique())
 
 # Filtered data based on selection
-filtered_data = df[df['Category'] == category]
+filtered_data = merged_df[merged_df['Category'] == category]
 
 # Define Holidays
 holidays = pd.DataFrame({
@@ -76,7 +89,55 @@ if not filtered_data.empty:
 else:
     st.write("No data available for the selected category.")
 
-# Predict Uplift with Adjustments
+# AI-Powered Sales Prediction Based on Weather
+st.subheader("AI-Powered Sales Prediction Based on Weather")
+if not filtered_data.empty:
+    # Feature selection: include weather features
+    features = ['Data.Temperature.Avg Temp', 'Data.Precipitation'] # Add relevant weather features
+    filtered_data['Data.Precipitation'] = filtered_data['Date'].map(pd.Timestamp.toordinal)
+
+    # Prepare the dataset
+    X = filtered_data[features + ['Data.Precipitation']]
+    y = filtered_data['Amount']
+
+    # Split the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train the model
+    weather_model = RandomForestRegressor()
+    weather_model.fit(X_train, y_train)
+
+    # Make predictions
+    predictions = weather_model.predict(X_test)
+
+    # Evaluate the model
+    mae = mean_absolute_error(y_test, predictions)
+    st.write(f"Mean Absolute Error: {mae:.2f}")
+
+    # Show the predictions vs actuals
+    comparison_df = pd.DataFrame({'Actual': y_test, 'Predicted': predictions})
+    st.write(comparison_df.head())
+
+    # Simulate different weather conditions
+    st.sidebar.subheader("Weather Simulation")
+    temp = st.sidebar.slider('Temperature (°C)', min_value=-10, max_value=40, value=20)
+    humidity = st.sidebar.slider('Humidity (%)', min_value=0, max_value=100, value=50)
+    precipitation = st.sidebar.slider('Precipitation (mm)', min_value=0, max_value=50, value=10)
+
+    # Use the model to predict sales based on simulated weather conditions
+    simulated_weather = pd.DataFrame({
+        'Temperature': [temp],
+        'Humidity': [humidity],
+        'Precipitation': [precipitation],
+        'Date_ordinal': [merged_df['Date_ordinal'].max() + 1]  # Future date
+    })
+    simulated_sales = weather_model.predict(simulated_weather)
+
+    st.write(f"Predicted Sales under these conditions: ${simulated_sales[0]:.2f}")
+else:
+    st.write("No data available for the selected category.")
+
+# Predict Uplift with Scenario Adjustments
 st.subheader("Predict Uplift with Scenario Adjustments")
 if not filtered_data.empty:
     # User input for scenario adjustments
@@ -102,7 +163,7 @@ else:
 
 # Rest of the Dashboard Code (Category Trends, Heatmaps, etc.)
 st.subheader("Category Trends Over Time")
-category_trends = df.groupby(['Date', 'Category'])['Amount'].sum().reset_index()
+category_trends = merged_df.groupby(['Date', 'Category'])['Amount'].sum().reset_index()
 fig_category_trends = px.line(category_trends, x='Date', y='Amount', color='Category', title='Category Trends Over Time')
 st.plotly_chart(fig_category_trends)
 
@@ -135,7 +196,10 @@ fig_sales_over_time = px.line(sales_over_time, x='Date', y='Amount', title='Sale
 st.plotly_chart(fig_sales_over_time)
 
 st.subheader("Category Sales Distribution")
-category_distribution = df.groupby('Category')['Amount'].sum().reset_index()
+category_distribution = merged_df.groupby('Category')['Amount'].sum().reset_index()
+fig_category_distribution = px.pie(category_distribution, values='Amount', names='Category', title='Category Sales Distribution')
+st.subheader("Category Sales Distribution")
+category_distribution = merged_df.groupby('Category')['Amount'].sum().reset_index()
 fig_category_distribution = px.pie(category_distribution, values='Amount', names='Category', title='Category Sales Distribution')
 st.plotly_chart(fig_category_distribution)
 
