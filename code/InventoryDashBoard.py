@@ -5,8 +5,8 @@ from prophet import Prophet
 
 # Load the data
 @st.cache_data
-def inventory_dashboard():
-    sales_data_path = '../mnt/data/apparel.csv'  # Adjust the path as necessary
+def load_sales_data():
+    sales_data_path = '../mnt/data/apparel.csv'  # Update with your actual dataset path
     df = pd.read_csv(sales_data_path)
     return df
 
@@ -14,7 +14,7 @@ def inventory_dashboard():
 st.title("Inventory Optimization Dashboard Based on Demand")
 
 # Load data
-sales_df = inventory_dashboard()
+sales_df = load_sales_data()
 
 # Display some basic information about the dataset
 st.subheader("Data Overview")
@@ -30,8 +30,8 @@ product_sku = st.sidebar.selectbox('Select Product SKU', sales_df['Variant SKU']
 filtered_sales = sales_df[sales_df['Variant SKU'] == product_sku]
 
 # Prepare data for forecasting
-filtered_sales = filtered_sales.rename(columns={'Date': 'ds', 'Quantity Sold': 'y'})
-filtered_sales['ds'] = pd.to_datetime(filtered_sales['ds'])
+#filtered_sales = filtered_sales.rename(columns={'YourDateColumn': 'ds', 'Variant Inventory Qty': 'y'})
+filtered_sales['Date'] = pd.date_range(start='2023-01-01', periods=len(filtered_sales), freq='D')
 
 # Demand Forecasting using Prophet
 st.subheader("Demand Forecasting")
