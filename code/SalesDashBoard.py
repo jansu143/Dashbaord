@@ -18,15 +18,18 @@ df['Date'] = pd.to_datetime(df['Date'])
 # Handle missing values
 df['Amount'] = df['Amount'].fillna(0)
 
-# Load weather data (you need to have this data)
-weather_data_path = '../mnt/data/weather_sales_data.csv'  # Replace with your weather data CSV path
+# Load weather data
+weather_data_path = '../mnt/data/weather.csv'  # Replace with your weather data CSV path
 weather_df = pd.read_csv(weather_data_path)
 
-# Ensure the 'Date' column is in datetime format
+# Ensure the 'Date.Full' column is in datetime format and create 'Date' column
 weather_df['Date'] = pd.to_datetime(weather_df['Date.Full'])
 
 # Merge sales data with weather data on the 'Date' column
 merged_df = pd.merge(df, weather_df, on='Date', how='left')
+
+# Create 'Date_ordinal' column
+merged_df['Date_ordinal'] = merged_df['Date'].map(pd.Timestamp.toordinal)
 
 # Sidebar for filtering
 st.sidebar.header('Filter Options')
@@ -93,11 +96,11 @@ else:
 st.subheader("AI-Powered Sales Prediction Based on Weather")
 if not filtered_data.empty:
     # Feature selection: include weather features
-    features = ['Data.Temperature.Avg Temp', 'Data.Precipitation'] # Add relevant weather features
-    filtered_data['Data.Precipitation'] = filtered_data['Date'].map(pd.Timestamp.toordinal)
+    features = ['Data.Temperature.Avg Temp', 'Data.Precipitation']  # Add relevant weather features
+    filtered_data['Date_ordinal'] = filtered_data['Date'].map(pd.Timestamp.toordinal)
 
-    # Prepare the dataset
-    X = filtered_data[features + ['Data.Precipitation']]
+    # Prepare the dataset for training
+    X = filtered_data[features + ['Date_ordinal']]
     y = filtered_data['Amount']
 
     # Split the data
@@ -121,19 +124,18 @@ if not filtered_data.empty:
     # Simulate different weather conditions
     st.sidebar.subheader("Weather Simulation")
     temp = st.sidebar.slider('Temperature (°C)', min_value=-10, max_value=40, value=20)
-    humidity = st.sidebar.slider('Humidity (%)', min_value=0, max_value=100, value=50)
     precipitation = st.sidebar.slider('Precipitation (mm)', min_value=0, max_value=50, value=10)
 
     # Use the model to predict sales based on simulated weather conditions
     simulated_weather = pd.DataFrame({
-        'Temperature': [temp],
-        'Humidity': [humidity],
-        'Precipitation': [precipitation],
+        'Data.Temperature.Avg Temp': [temp],
+        'Data.Precipitation': [precipitation],
         'Date_ordinal': [merged_df['Date_ordinal'].max() + 1]  # Future date
     })
-    simulated_sales = weather_model.predict(simulated_weather)
 
-    st.write(f"Predicted Sales under these conditions: ${simulated_sales[0]:.2f}")
+    predicted_sales = weather_model.predict(simulated_weather)
+
+    st.write(f"Predicted Sales under these conditions: ${predicted_sales[0]:.2f}")
 else:
     st.write("No data available for the selected category.")
 
@@ -197,26 +199,3 @@ st.plotly_chart(fig_sales_over_time)
 
 st.subheader("Category Sales Distribution")
 category_distribution = merged_df.groupby('Category')['Amount'].sum().reset_index()
-fig_category_distribution = px.pie(category_distribution, values='Amount', names='Category', title='Category Sales Distribution')
-st.subheader("Category Sales Distribution")
-category_distribution = merged_df.groupby('Category')['Amount'].sum().reset_index()
-fig_category_distribution = px.pie(category_distribution, values='Amount', names='Category', title='Category Sales Distribution')
-st.plotly_chart(fig_category_distribution)
-
-st.subheader("Top Products by Sales")
-top_products = filtered_data.groupby('Style')['Amount'].sum().reset_index().sort_values(by='Amount', ascending=False).head(10)
-fig_top_products = px.bar(top_products, x='Style', y='Amount', title='Top 10 Products by Sales')
-st.plotly_chart(fig_top_products)
-
-st.subheader("Sales by Region")
-sales_by_region = filtered_data.groupby('ship-state')['Amount'].sum().reset_index()
-fig_sales_by_region = px.bar(sales_by_region, x='ship-state', y='Amount', title='Sales by Region')
-st.plotly_chart(fig_sales_by_region)
-
-st.subheader("Product Sales Analysis")
-product_sales = filtered_data.groupby('Style')['Amount'].sum().reset_index()
-max_sales_product = product_sales.loc[product_sales['Amount'].idxmax()]
-min_sales_product = product_sales.loc[product_sales['Amount'].idxmin()]
-
-st.write(f"**Product with the Most Sales:** {max_sales_product['Style']} - ${max_sales_product['Amount']:.2f}")
-st.write(f"**Product with the Least Sales:** {min_sales_product['Style']} - ${min_sales_product['Amount']:.2f}")
