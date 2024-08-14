@@ -1,13 +1,19 @@
 import streamlit as st
-from SalesDashBoard import sales_dashboard
+import pandas as pd
+import plotly.express as px
+
+# Import the specific dashboard scripts
 from InventoryDashBoard import inventory_dashboard
+from SalesDashBoard import sales_dashboard
 
-# Sidebar for navigation
-st.sidebar.header("Dashboard Navigation")
-option = st.sidebar.radio("Go to", ('Sales Dashboard', 'Inventory Optimization Dashboard'))
+# Unified sidebar for navigation
+st.sidebar.title("Dashboard Navigation")
+dashboard_selection = st.sidebar.radio("Go to", ("Sales Dashboard", "Inventory Optimization Dashboard"))
 
-# Display selected dashboard
-if option == 'Sales Dashboard':
+# Conditional rendering based on selection
+if dashboard_selection == "Sales Dashboard":
+    st.title("AI Trend Analysis (Sales Forecasting with Prophet and Holidays)")
     sales_dashboard()
-elif option == 'Inventory Optimization Dashboard':
+elif dashboard_selection == "Inventory Optimization Dashboard":
+    st.title("Inventory Optimization Dashboard Based on Demand")
     inventory_dashboard()

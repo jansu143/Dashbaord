@@ -6,7 +6,9 @@ from prophet import Prophet
 # Load the data
 @st.cache_data
 def inventory_dashboard():
-    sales_data_path = '../mnt/data/apparel.csv'  # Update with your actual dataset path
+    
+    sales_data_path = 'https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/apparel.csv'
+
     df = pd.read_csv(sales_data_path)
     return df
 
