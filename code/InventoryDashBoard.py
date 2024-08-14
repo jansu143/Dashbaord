@@ -95,7 +95,7 @@ else:
         for alert in alert_messages:
             st.warning(alert)
     else:
-        st.success("No inventory alerts")
+        st.success("No inventory alerts.")
 
 # Inventory Optimization Button
 if st.button("Run Inventory Optimization"):
