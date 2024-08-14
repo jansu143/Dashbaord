@@ -4,3 +4,4 @@ setuptools>=65.0.0
 prophet
 numpy==1.24.4
 plotly
+scikit-learn
