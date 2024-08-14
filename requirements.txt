@@ -1,7 +1,3 @@
-pip>=24.0.2
-numpy==1.24.4
 pandas
 streamlit
-prophet
 setuptools>=65.0.0
-
