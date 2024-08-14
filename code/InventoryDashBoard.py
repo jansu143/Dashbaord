@@ -99,4 +99,4 @@ else:
 
 # Inventory Optimization Button
 if st.button("Run Inventory Optimization"):
-    st.write("Inventory optimization has been run.")
+    st.write("Inventory optimization has been run")
