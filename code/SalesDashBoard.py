@@ -10,7 +10,7 @@ from sklearn.metrics import mean_absolute_error
 np.float_ = np.float64
 def sales_dashboard():
 # Load your data
-    data_path = '../mnt/data/AmazonSaleReport.csv'  # Replace with your actual CSV file path
+    data_path = 'https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/AmazonSaleReport.csv'  # Replace with your actual CSV file path
     df = pd.read_csv(data_path, encoding='ISO-8859-1')
 
     # Ensure 'Date' is in datetime format
