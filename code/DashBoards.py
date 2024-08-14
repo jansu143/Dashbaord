@@ -1,20 +1,6 @@
 import streamlit as st
-
-def sales_dashboard():
-    st.title("Comprehensive Sales Dashboard")
-    
-    # Insert all your sales dashboard code here
-    st.subheader("AI Trend Analysis (Sales Forecasting with Prophet and Holidays)")
-    # (Your sales dashboard code)
-    # ...
-
-def inventory_dashboard():
-    st.title("Inventory Optimization Dashboard")
-    
-    # Insert all your inventory dashboard code here
-    st.subheader("Inventory Levels Over Time")
-    # (Your inventory optimization dashboard code)
-    # ...
+from SalesDashBoard import sales_dashboard
+from InventoryDashBoard import inventory_dashboard
 
 # Sidebar for navigation
 st.sidebar.title("Dashboard Navigation")
