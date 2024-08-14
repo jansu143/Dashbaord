@@ -4,3 +4,4 @@ pandas
 streamlit
 prophet
 setuptools>=65.0.0
+
