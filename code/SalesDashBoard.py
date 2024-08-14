@@ -76,7 +76,7 @@ if not filtered_data.empty:
     fig_forecast.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_upper'], mode='lines', fill='tonexty', name='Upper Confidence Interval'))
     fig_forecast.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_lower'], mode='lines', fill='tonexty', name='Lower Confidence Interval'))
 
-    fig_forecast.update_layout(title='Sales Forecasting using Prophet with Holiday Effects', xaxis_title='Date', yaxis_title='Sales Amount')
+    fig_forecast.update_layout(title='Sales Forecasting with Holiday Effects', xaxis_title='Date', yaxis_title='Sales Amount')
     st.plotly_chart(fig_forecast)
 
     # Plot the holiday effects
