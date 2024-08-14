@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+data_path ="https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/apparel.csv"
 # Load and preprocess the data
-data_path = '../mnt/data/apparel.csv'  # Adjust this path if needed
+#data_path = '../mnt/data/apparel.csv'  # Adjust this path if needed
 df = pd.read_csv(data_path)
 
 # Required columns based on provided details
