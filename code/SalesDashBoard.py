@@ -50,7 +50,7 @@ holidays = pd.DataFrame({
 })
 
 # AI Trend Analysis using Prophet with Holidays
-st.subheader("AI Trend Analysis (Sales Forecasting with Prophet and Holidays)")
+st.subheader("AI Trend Analysis (Sales Forecasting)")
 if not filtered_data.empty:
     # Prepare data for Prophet
     prophet_df = filtered_data[['Date', 'Amount']].rename(columns={'Date': 'ds', 'Amount': 'y'})
@@ -95,52 +95,7 @@ if not filtered_data.empty:
 else:
     st.write("No data available for the selected category.")
 
-# AI-Powered Sales Prediction Based on Weather
-st.subheader("AI-Powered Sales Prediction Based on Weather")
-if not filtered_data.empty:
-    # Feature selection: include weather features
-    features = ['Data.Temperature.Avg Temp', 'Data.Precipitation']  # Add relevant weather features
-    filtered_data['Date_ordinal'] = filtered_data['Date'].map(pd.Timestamp.toordinal)
 
-    # Prepare the dataset for training
-    X = filtered_data[features + ['Date_ordinal']]
-    y = filtered_data['Amount']
-
-    # Split the data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Train the model
-    weather_model = RandomForestRegressor()
-    weather_model.fit(X_train, y_train)
-
-    # Make predictions
-    predictions = weather_model.predict(X_test)
-
-    # Evaluate the model
-    mae = mean_absolute_error(y_test, predictions)
-    st.write(f"Mean Absolute Error: {mae:.2f}")
-
-    # Show the predictions vs actuals
-    comparison_df = pd.DataFrame({'Actual': y_test, 'Predicted': predictions})
-    st.write(comparison_df.head())
-
-    # Simulate different weather conditions
-    st.sidebar.subheader("Weather Simulation")
-    temp = st.sidebar.slider('Temperature (°C)', min_value=-10, max_value=40, value=20)
-    precipitation = st.sidebar.slider('Precipitation (mm)', min_value=0, max_value=50, value=10)
-
-    # Use the model to predict sales based on simulated weather conditions
-    simulated_weather = pd.DataFrame({
-        'Data.Temperature.Avg Temp': [temp],
-        'Data.Precipitation': [precipitation],
-        'Date_ordinal': [merged_df['Date_ordinal'].max() + 1]  # Future date
-    })
-
-    predicted_sales = weather_model.predict(simulated_weather)
-
-    st.write(f"Predicted Sales under these conditions: ${predicted_sales[0]:.2f}")
-else:
-    st.write("No data available for the selected category.")
 
 # Predict Uplift with Scenario Adjustments
 st.subheader("Predict Uplift with Scenario Adjustments")
