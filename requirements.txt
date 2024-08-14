@@ -1,5 +1,5 @@
 pip>=24.0.2
-numpy
+numpy==1.24.4
 pandas
 streamlit
 prophet
