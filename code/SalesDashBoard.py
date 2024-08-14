@@ -8,9 +8,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 
-
 # Load your data
-data_path = 'https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/AmazonSaleReport.csv'  # Replace with your actual CSV file path
+#data_path = '../mnt/data/AmazonSaleReport.csv' 
+ # Replace with your actual CSV file path
+data_path ="https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/AmazonSaleReport.csv"
 df = pd.read_csv(data_path, encoding='ISO-8859-1')
 
 # Ensure 'Date' is in datetime format
@@ -20,11 +21,12 @@ df['Date'] = pd.to_datetime(df['Date'])
 df['Amount'] = df['Amount'].fillna(0)
 
 # Load weather data
-weather_data_path = '../mnt/data/weather.csv'  # Replace with your weather data CSV path
+#weather_data_path = '../mnt/data/weather_sales_data.csv'
+weather_data_path = 'https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/weather_sales_data.csv'  # Replace with your weather data CSV path
 weather_df = pd.read_csv(weather_data_path)
 
 # Ensure the 'Date.Full' column is in datetime format and create 'Date' column
-weather_df['Date'] = pd.to_datetime(weather_df['Date.Full'])
+weather_df['Date'] = pd.to_datetime(weather_df['Date'])
 
 # Merge sales data with weather data on the 'Date' column
 merged_df = pd.merge(df, weather_df, on='Date', how='left')
