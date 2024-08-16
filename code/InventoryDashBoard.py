@@ -4,9 +4,9 @@ import plotly.express as px
 from prophet import Prophet
 from datetime import datetime
 import numpy as np
-
+data_path ="https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/apparel.csv"
 # Load and preprocess the data
-data_path = '../mnt/data/apparel.csv'  # Adjust the path as necessary
+#data_path = '../mnt/data/apparel.csv'  # Adjust the path as necessary
 df = pd.read_csv(data_path)
 
 # Required columns based on provided details
