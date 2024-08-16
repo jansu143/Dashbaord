@@ -50,7 +50,7 @@ filtered_df = filtered_df[(filtered_df['Date'] >= pd.to_datetime(date_range[0]))
 
 # Check if filtered data is empty
 if filtered_df.empty:
-    st.warning("No data available for the selected criteria.")
+    st.warning("No data available for the selected criteria")
 else:
     # Inventory Measures
     st.subheader("Inventory Measures")
