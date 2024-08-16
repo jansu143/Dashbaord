@@ -3,10 +3,10 @@ import pandas as pd
 import plotly.express as px
 from prophet import Prophet
 from datetime import datetime
+import numpy as np
 
 # Load and preprocess the data
-data_path ="https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/apparel.csv"
-#data_path = '../mnt/data/apparel.csv'  # Adjust the path as necessary
+data_path = '../mnt/data/apparel.csv'  # Adjust the path as necessary
 df = pd.read_csv(data_path)
 
 # Required columns based on provided details
@@ -25,6 +25,11 @@ df = df.dropna(subset=['Vendor', 'Title'])
 
 # Simulate a 'Date' column for inventory trends
 df['Date'] = pd.date_range(start='2023-01-01', periods=len(df), freq='D')
+
+# Simulate External Market Data (e.g., Competitor Prices, Economic Indicators)
+# Replace this section with actual data retrieval from an API or CSV
+df['Competitor Price'] = df['Variant Price'] * np.random.uniform(0.8, 1.2, size=len(df))
+df['Economic Indicator'] = np.random.uniform(100, 200, size=len(df))  # Simulated economic indicator
 
 # Sidebar for filtering and customization
 st.sidebar.header('Filter Options')
@@ -60,46 +65,145 @@ else:
     inventory_trend_fig = px.line(filtered_df, x='Date', y='Variant Price', title='Inventory Trend')
     st.plotly_chart(inventory_trend_fig)
 
-    # Predictive Analytics using Prophet
-    st.subheader("Inventory Forecast using Predictive Analytics")
-    forecast_period = st.sidebar.slider("Select Forecast Period (days)", 1, 365, 30)
+    # Display Competitor Price Comparison
+    st.subheader("Competitor Price Comparison")
+    competitor_price_fig = px.line(filtered_df, x='Date', y=['Variant Price', 'Competitor Price'], title='Your Price vs. Competitor Price')
+    st.plotly_chart(competitor_price_fig)
 
-    # Prepare data for Prophet
-    prophet_df = filtered_df[['Date', 'Variant Inventory Qty']].rename(columns={'Date': 'ds', 'Variant Inventory Qty': 'y'})
+    # Display Economic Indicator Trend
+    st.subheader("Economic Indicator Trend")
+    economic_indicator_fig = px.line(filtered_df, x='Date', y='Economic Indicator', title='Economic Indicator Trend')
+    st.plotly_chart(economic_indicator_fig)
 
-    # Initialize and train the Prophet model
-    model = Prophet()
-    model.fit(prophet_df)
+    # Weekly Forecasting and Stock Adjustment with External Data
+    st.subheader("Weekly Inventory Forecast and Stock Adjustment (with External Data)")
+    forecast_weeks = st.sidebar.slider("Select Forecast Weeks", 1, 52, 12)
+
+    # Prepare data for Prophet (aggregating to weekly level and including external data)
+    weekly_df = filtered_df[['Date', 'Variant Inventory Qty', 'Competitor Price', 'Economic Indicator']].copy()
+    weekly_df = weekly_df.resample('W-Mon', on='Date').mean().reset_index().sort_values('Date')
+    weekly_df = weekly_df.rename(columns={'Date': 'ds', 'Variant Inventory Qty': 'y'})
+
+    # Initialize and train the Prophet model with external regressors
+    model = Prophet(yearly_seasonality=True, weekly_seasonality=True)
+    model.add_regressor('Competitor Price')
+    model.add_regressor('Economic Indicator')
+    model.fit(weekly_df)
 
     # Create future dates dataframe
-    future = model.make_future_dataframe(periods=forecast_period)
+    future_weeks = model.make_future_dataframe(periods=forecast_weeks, freq='W-Mon')
+    future_weeks['Competitor Price'] = weekly_df['Competitor Price'].mean()  # Assume constant competitor price for simplicity
+    future_weeks['Economic Indicator'] = weekly_df['Economic Indicator'].mean()  # Assume constant economic indicator for simplicity
     
     # Predict future values
-    forecast = model.predict(future)
+    forecast_weeks = model.predict(future_weeks)
 
     # Plot the forecast
-    forecast_fig = px.line(forecast, x='ds', y='yhat', title=f'Inventory Forecast for next {forecast_period} days')
-    forecast_fig.add_scatter(x=prophet_df['ds'], y=prophet_df['y'], mode='markers', name='Actual')
-    st.plotly_chart(forecast_fig)
+    forecast_weeks_fig = px.line(forecast_weeks, x='ds', y='yhat', title=f'Weekly Inventory Forecast for next {forecast_weeks} weeks')
+    forecast_weeks_fig.add_scatter(x=weekly_df['ds'], y=weekly_df['y'], mode='markers', name='Actual')
+    st.plotly_chart(forecast_weeks_fig)
 
-    # AI-driven inventory alerts with interactive elements
-    st.subheader("Inventory Alerts")
-    alert_count = 0
-    for _, row in filtered_df.iterrows():
-        if row['Variant Inventory Qty'] < low_inventory_threshold:
-            st.error(f"⚠️ Low inventory: {row['Title']} (Vendor: {row['Vendor']}) - Quantity: {row['Variant Inventory Qty']}")
-            alert_count += 1
-        elif row['Variant Inventory Qty'] > high_inventory_threshold:
-            st.warning(f"⚠️ High inventory: {row['Title']} (Vendor: {row['Vendor']}) - Quantity: {row['Variant Inventory Qty']}")
-            alert_count += 1
+    # Weekly Stock Adjustment Recommendations
+    st.subheader("Weekly Stock Adjustment Recommendations (with External Data)")
+    
+    weekly_adjustments = []
+    for _, row in forecast_weeks.iterrows():
+        adjustment = row['yhat'] - (row['yhat'] * 0.10)  # Example: Adjusting stock to be 10% above forecast
+        weekly_adjustments.append({
+            "Week": row['ds'].strftime('%Y-%m-%d'),
+            "Forecasted Quantity": row['yhat'],
+            "Suggested Adjustment": adjustment
+        })
 
-    if alert_count == 0:
-        st.success("✅ No inventory alerts")
+    # Convert suggestions to DataFrame for better visualization
+    if weekly_adjustments:
+        adjustments_df = pd.DataFrame(weekly_adjustments)
+        st.write("Stock Adjustment Suggestions:")
+        
+        # Apply color scale to Suggested Adjustment
+        styled_adjustments_df = adjustments_df.style.format({"Forecasted Quantity": "{:.2f}", "Suggested Adjustment": "{:.2f}"}).background_gradient(subset=['Suggested Adjustment'], cmap='Greens')
+        
+        # Use st.dataframe to display with color scales
+        st.dataframe(styled_adjustments_df)
+        
+        # Display as a bar chart
+        fig = px.bar(adjustments_df, x='Week', y='Suggested Adjustment', color='Forecasted Quantity',
+                     title="Weekly Stock Adjustments", labels={'Suggested Adjustment': 'Adjustment'})
+        st.plotly_chart(fig)
+    else:
+        st.write("No stock adjustments required based on current data.")
 
-# Inventory Optimization Button
-if st.button("Run Inventory Optimization"):
-    st.write("Inventory optimization has been run.")
+    # Automated Inventory Optimization and Market Adaptation
+# Automated Inventory Optimization and Market Adaptation
+st.subheader("Automated Inventory Optimization and Market Adaptation")
 
+# Example Optimization: Suggest Reorder Quantity based on forecast and market adaptation
+reorder_point = 50  # Example threshold for reorder point
+safety_stock = 20    # Example safety stock level
+
+optimization_suggestions = []
+for _, row in filtered_df.iterrows():
+    # Ensure the date exists in the forecast
+    matching_forecast = forecast_weeks.loc[forecast_weeks['ds'] == row['Date']]
+    
+    if not matching_forecast.empty:
+        forecasted_qty = matching_forecast['yhat'].values[0]
+        if forecasted_qty < reorder_point:
+            reorder_qty = reorder_point + safety_stock - row['Variant Inventory Qty']
+            optimization_suggestions.append({
+                "Product": row['Title'],
+                "Vendor": row['Vendor'],
+                "Reorder Quantity": reorder_qty
+            })
+    else:
+        st.warning(f"No matching forecast found for the date {row['Date']} in the weekly forecast data.")
+
+# Convert suggestions to DataFrame for better visualization
+if optimization_suggestions:
+    suggestions_df = pd.DataFrame(optimization_suggestions)
+    st.write("Optimization Suggestions:")
+    
+    # Apply color scale to Reorder Quantity
+    styled_df = suggestions_df.style.format({"Reorder Quantity": "{:.2f}"}).background_gradient(subset=['Reorder Quantity'], cmap='Blues')
+    
+    # Use st.dataframe to display with conditional formatting
+    st.dataframe(styled_df)
+    
+    # Display as a bar chart
+    fig = px.bar(suggestions_df, x='Product', y='Reorder Quantity', color='Vendor',
+                 title="Reorder Quantity by Product", labels={'Reorder Quantity': 'Reorder Qty'})
+    st.plotly_chart(fig)
+else:
+    st.write("No optimization actions required based on current data.")
+st.subheader("Weekly Stock Adjustment Recommendations")
+    
+weekly_adjustments = []
+for _, row in forecast_weeks.iterrows():
+            adjustment = row['yhat'] - (row['yhat'] * 0.10)  # Example: Adjusting stock to be 10% above forecast
+            weekly_adjustments.append({
+                "Week": row['ds'].strftime('%Y-%m-%d'),
+                "Forecasted Quantity": row['yhat'],
+                "Suggested Adjustment": adjustment
+            })
+
+        # Convert suggestions to DataFrame for better visualization
+if weekly_adjustments:
+            adjustments_df = pd.DataFrame(weekly_adjustments)
+            st.write("Stock Adjustment Suggestions:")
+            
+            # Apply color scale to Suggested Adjustment
+            styled_adjustments_df = adjustments_df.style.format({"Forecasted Quantity": "{:.2f}", "Suggested Adjustment": "{:.2f}"}).background_gradient(subset=['Suggested Adjustment'], cmap='Greens')
+            
+            # Use st.dataframe to display with color scales
+            st.dataframe(styled_adjustments_df)
+            
+            # Display as a bar chart
+            fig = px.bar(adjustments_df, x='Week', y='Suggested Adjustment', color='Forecasted Quantity',
+                        title="Weekly Stock Adjustments", labels={'Suggested Adjustment': 'Adjustment'})
+            st.plotly_chart(fig)
+else:
+            st.write("No stock adjustments required based on current data.")
+   
 # Download filtered data as CSV
 st.sidebar.download_button(
     label="Download Filtered Data as CSV",
