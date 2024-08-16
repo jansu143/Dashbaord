@@ -2,10 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from prophet import Prophet
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
-data_path ="https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/apparel.csv"
+
 # Load and preprocess the data
+data_path ="https://raw.githubusercontent.com/jansu143/Dashbaord/main/mnt/data/apparel.csv"
 #data_path = '../mnt/data/apparel.csv'  # Adjust the path as necessary
 df = pd.read_csv(data_path)
 
@@ -27,9 +28,21 @@ df = df.dropna(subset=['Vendor', 'Title'])
 df['Date'] = pd.date_range(start='2023-01-01', periods=len(df), freq='D')
 
 # Simulate External Market Data (e.g., Competitor Prices, Economic Indicators)
-# Replace this section with actual data retrieval from an API or CSV
 df['Competitor Price'] = df['Variant Price'] * np.random.uniform(0.8, 1.2, size=len(df))
 df['Economic Indicator'] = np.random.uniform(100, 200, size=len(df))  # Simulated economic indicator
+
+# Fetch real-time sales data (simulated)
+def fetch_real_time_sales():
+    # Simulate real-time sales data over the last 7 days
+    sales_data = {
+        'Date': pd.date_range(start=datetime.now() - timedelta(days=7), periods=7, freq='D'),
+        'Product': np.random.choice(df['Title'].unique(), size=7),
+        'Sales Qty': np.random.randint(1, 20, size=7)
+    }
+    return pd.DataFrame(sales_data)
+
+# Fetch and integrate real-time sales data
+real_time_sales_df = fetch_real_time_sales()
 
 # Sidebar for filtering and customization
 st.sidebar.header('Filter Options')
@@ -47,6 +60,10 @@ if vendor != 'All Vendors':
 if product != 'All Products':
     filtered_df = filtered_df[filtered_df['Title'] == product]
 filtered_df = filtered_df[(filtered_df['Date'] >= pd.to_datetime(date_range[0])) & (filtered_df['Date'] <= pd.to_datetime(date_range[1]))]
+
+# Merge real-time sales data with historical inventory data
+filtered_df = pd.merge(filtered_df, real_time_sales_df, how='left', left_on='Date', right_on='Date')
+filtered_df['Sales Qty'] = filtered_df['Sales Qty'].fillna(0)  # Fill NaNs for days with no real-time sales data
 
 # Check if filtered data is empty
 if filtered_df.empty:
@@ -134,76 +151,84 @@ else:
         st.write("No stock adjustments required based on current data.")
 
     # Automated Inventory Optimization and Market Adaptation
-# Automated Inventory Optimization and Market Adaptation
-st.subheader("Automated Inventory Optimization and Market Adaptation")
+    st.subheader("Automated Inventory Optimization and Market Adaptation")
 
-# Example Optimization: Suggest Reorder Quantity based on forecast and market adaptation
-reorder_point = 50  # Example threshold for reorder point
-safety_stock = 20    # Example safety stock level
+    # Example Optimization: Suggest Reorder Quantity based on forecast and market adaptation
+    reorder_point = 50  # Example threshold for reorder point
+    safety_stock = 20    # Example safety stock level
 
-optimization_suggestions = []
-for _, row in filtered_df.iterrows():
-    # Ensure the date exists in the forecast
-    matching_forecast = forecast_weeks.loc[forecast_weeks['ds'] == row['Date']]
-    
-    if not matching_forecast.empty:
-        forecasted_qty = matching_forecast['yhat'].values[0]
-        if forecasted_qty < reorder_point:
-            reorder_qty = reorder_point + safety_stock - row['Variant Inventory Qty']
-            optimization_suggestions.append({
-                "Product": row['Title'],
-                "Vendor": row['Vendor'],
-                "Reorder Quantity": reorder_qty
-            })
+    optimization_suggestions = []
+    for _, row in filtered_df.iterrows():
+        # Ensure the date exists in the forecast
+        matching_forecast = forecast_weeks.loc[forecast_weeks['ds'] == row['Date']]
+        
+        if not matching_forecast.empty:
+            forecasted_qty = matching_forecast['yhat'].values[0]
+            if forecasted_qty < reorder_point:
+                reorder_qty = reorder_point + safety_stock - row['Variant Inventory Qty']
+                optimization_suggestions.append({
+                    "Product": row['Title'],
+                    "Vendor": row['Vendor'],
+                    "Reorder Quantity": reorder_qty
+                })
+        else:
+            st.warning(f"No matching forecast found for the date {row['Date']} in the weekly forecast data.")
+
+    # Convert suggestions to DataFrame for better visualization
+    if optimization_suggestions:
+        suggestions_df = pd.DataFrame(optimization_suggestions)
+        st.write("Optimization Suggestions:")
+        
+        # Apply color scale to Reorder Quantity
+        styled_df = suggestions_df.style.format({"Reorder Quantity": "{:.2f}"}).background_gradient(subset=['Reorder Quantity'], cmap='Blues')
+        
+        # Use st.dataframe to display with conditional formatting
+        st.dataframe(styled_df)
+        
+        # Display as a bar chart
+        fig = px.bar(suggestions_df, x='Product', y='Reorder Quantity', color='Vendor',
+                     title="Reorder Quantity by Product", labels={'Reorder Quantity': 'Reorder Qty'})
+        st.plotly_chart(fig)
     else:
-        st.warning(f"No matching forecast found for the date {row['Date']} in the weekly forecast data.")
+        st.write("No optimization actions required based on current data.")
 
-# Convert suggestions to DataFrame for better visualization
-if optimization_suggestions:
-    suggestions_df = pd.DataFrame(optimization_suggestions)
-    st.write("Optimization Suggestions:")
-    
-    # Apply color scale to Reorder Quantity
-    styled_df = suggestions_df.style.format({"Reorder Quantity": "{:.2f}"}).background_gradient(subset=['Reorder Quantity'], cmap='Blues')
-    
-    # Use st.dataframe to display with conditional formatting
-    st.dataframe(styled_df)
-    
-    # Display as a bar chart
-    fig = px.bar(suggestions_df, x='Product', y='Reorder Quantity', color='Vendor',
-                 title="Reorder Quantity by Product", labels={'Reorder Quantity': 'Reorder Qty'})
-    st.plotly_chart(fig)
-else:
-    st.write("No optimization actions required based on current data.")
-st.subheader("Weekly Stock Adjustment Recommendations")
-    
-weekly_adjustments = []
-for _, row in forecast_weeks.iterrows():
-            adjustment = row['yhat'] - (row['yhat'] * 0.10)  # Example: Adjusting stock to be 10% above forecast
-            weekly_adjustments.append({
-                "Week": row['ds'].strftime('%Y-%m-%d'),
-                "Forecasted Quantity": row['yhat'],
-                "Suggested Adjustment": adjustment
-            })
+    # Real-Time Inventory Alerts
+    st.subheader("Real-Time Inventory Alerts")
 
-        # Convert suggestions to DataFrame for better visualization
-if weekly_adjustments:
-            adjustments_df = pd.DataFrame(weekly_adjustments)
-            st.write("Stock Adjustment Suggestions:")
-            
-            # Apply color scale to Suggested Adjustment
-            styled_adjustments_df = adjustments_df.style.format({"Forecasted Quantity": "{:.2f}", "Suggested Adjustment": "{:.2f}"}).background_gradient(subset=['Suggested Adjustment'], cmap='Greens')
-            
-            # Use st.dataframe to display with color scales
-            st.dataframe(styled_adjustments_df)
-            
-            # Display as a bar chart
-            fig = px.bar(adjustments_df, x='Week', y='Suggested Adjustment', color='Forecasted Quantity',
-                        title="Weekly Stock Adjustments", labels={'Suggested Adjustment': 'Adjustment'})
-            st.plotly_chart(fig)
-else:
-            st.write("No stock adjustments required based on current data.")
-   
+    # Check for real-time inventory shortages
+    real_time_alerts = []
+    for _, row in filtered_df.iterrows():
+        matching_forecast = forecast_weeks.loc[forecast_weeks['ds'] == row['Date']]
+        if not matching_forecast.empty:
+            forecasted_demand = matching_forecast['yhat'].values[0]
+            if row['Variant Inventory Qty'] + safety_stock < forecasted_demand:
+                real_time_alerts.append({
+                    "Product": row['Title'],
+                    "Vendor": row['Vendor'],
+                    "Current Inventory": row['Variant Inventory Qty'],
+                    "Forecasted Demand": forecasted_demand,
+                    "Safety Stock": safety_stock,
+                    "Alert": "Shortage Expected"
+                })
+
+    # Display real-time alerts
+    if real_time_alerts:
+        alerts_df = pd.DataFrame(real_time_alerts)
+        st.write("Inventory Shortage Alerts:")
+        
+        # Apply color scale based on alert status
+        styled_alerts_df = alerts_df.style.applymap(lambda x: 'background-color: red' if x == "Shortage Expected" else 'background-color: green', subset=['Alert'])
+        
+        # Display the alerts with conditional formatting
+        st.dataframe(styled_alerts_df)
+        
+        # Display as a bar chart
+        fig = px.bar(alerts_df, x='Product', y='Forecasted Demand', color='Alert',
+                     title="Real-Time Inventory Shortage Alerts", labels={'Forecasted Demand': 'Forecasted Demand'})
+        st.plotly_chart(fig)
+    else:
+        st.write("No inventory shortages expected based on the current forecast.")
+
 # Download filtered data as CSV
 st.sidebar.download_button(
     label="Download Filtered Data as CSV",
@@ -211,3 +236,4 @@ st.sidebar.download_button(
     file_name='filtered_inventory_data.csv',
     mime='text/csv'
 )
+
